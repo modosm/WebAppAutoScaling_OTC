@@ -1,0 +1,153 @@
+heat_template_version: 2016-04-08
+
+description: >
+  This is the main Heat template for the 3-tier LAMP.
+  This template contains the autoscaling code and calls nested templates.
+  Ceilometer is required in order to run this template.
+  This file calls the following yaml files:
+    setup_net_sg.yaml:          sets up the security groups and networks for Web, App, and
+    Database
+    heat_app_tier.yaml starts up application servers and does on-the-fly builds
+    heat_web_tier.yaml starts up web servers and does on-the-fly builds
+    heat_sql_tier.yaml starts up mysql server and does on-the-fly builds.
+
+  REQUIRED YAML FILES:
+  setup_net_sg.yaml, heat_app_tier.yaml, heat_sql_tier.yaml, heat_web_tier.yaml
+
+  REQUIRED PARAMETERS:
+  ssh_key_name, image_id, public_network_id
+
+  OPTIONAL PARAMETERS:
+  db_instance_flavor, app_instance_flavor, web_instance_flavor, db_server_name,
+  app_server_name, web_server_name, dns_nameserver
+
+######################################
+parameters:
+    ssh_key_name:
+        type:                   string
+        label:                  SSH Key Name
+        description:            >
+            REQUIRED PARAMETER -Name of an existing SSH KeyPair to enable SSH access to
+            instances.
+        default:                wordpress
+        hidden:                 false
+        constraints:
+            - custom_constraint: nova.keypair
+              description:      Must already exist on your cloud
+
+    image_id:
+        type:                   string
+        label:                  Image ID
+        description:            >
+            REQUIRED PARAMETER - The image id to be used for the compute instance. Please
+            specify your own Image ID in your project/tenant. This could be modified to
+            use different images for each tier.
+        default:
+        hidden:                 false
+        constraints:
+            - custom_constraint: glance.image
+              description:      Must be a valid image on your cloud
+
+    # public_network_id:
+    #     type:                 string
+    #     label:                Public Network
+    #     description:          >
+    #         REQUIRED PARAMETER - The public network name or id used to access the
+    #         internet. This will fail if this is not a true public network
+    #     hidden:               false
+    #     default:
+    #     constraints:
+    #         - custom_constraint: neutron.network
+    #           description:    Must be a valid network on your cloud
+
+    db_instance_flavor:
+        type:                   string
+        label:                  Database server instance flavor
+        description:            The flavor type to use for db server.
+        default:                s2.large.2
+        hidden:                 false
+        constraints:
+            - custom_constraint: nova.flavor
+              description:      >
+                Must be a valid flavor provided by your cloudprovider.
+
+    app_instance_flavor:
+        type:                   string
+        label:                  Application server instance flavor
+        description:            The flavor type to use for app servers.
+        default:                s2.medium.2
+        hidden:                 false
+        constraints:
+            - custom_constraint: nova.flavor
+              description:      >
+                Must be a valid flavor provided by your cloud provider.
+
+    web_instance_flavor:
+        type:                   string
+        label:                  Web server instance flavor
+        description:            The flavor type to use for web servers.
+        default:                s2.medium.2
+        hidden:                 false
+        constraints:
+            - custom_constraint: nova.flavor
+              description:      >
+                Must be a valid flavor provided by your cloud provider.
+
+    db_server_name:
+        type:                   string
+        label:                  Server Name
+        description:            Name of the database servers
+        default:                wordpress_db_server
+
+    app_server_name:
+        type:                   string
+        label:                  Server Name
+        description:            Name of the application servers
+        default:                wordpress_app_server
+
+    web_server_name:
+        type:                   string
+        label:                  Server Name
+        description:            Name of the web servers
+        default:                wordpress_web_server
+
+    dns_nameserver:
+        type:                   comma_delimited_list
+        label:                  DNS Name Server
+        description:            The IP address of a DNS nameserver in list format
+        default:                8.8.8.8,8.8.4.4
+
+######################################
+# The resources section defines actual resources that make up a stack deployed from the HOT template
+# (for instance compute instances, networks, storage volumes).
+
+resources:
+
+####################
+# Setup Networking and Security Group
+# Call the setup_net_sg.yaml file
+
+    network_setup:
+        type:                   lib/setup_net_sg.yaml
+        properties:
+            public_network_id:          { get_param: public_network_id }
+            dns_nameserver:             { get_param: dns_nameserver }
+
+####################
+## Kick off a Database server
+    launch_db_server:
+        type:                   lib/heat_sql_tier.yaml
+        properties:
+            ssh_key_name:               { get_param: ssh_key_name }
+            server_name:                { get_param: db_server_name }
+            instance_flavor:            { get_param: db_instance_flavor }
+            image_id:                   { get_param: image_id }
+            private_network_id:         { get_attr: [network_setup, db_private_network_id]}
+            security_group:             { get_attr: [network_setup, db_security_group_id]}
+
+####################
+# Autoscaling for the app servers
+    app_autoscale_group:
+        type:                   OSE::AS::ScalingGroup
+        properties:
+            scaling_group_name:
