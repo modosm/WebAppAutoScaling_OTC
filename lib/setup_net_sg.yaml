@@ -1,4 +1,4 @@
-heat_template_version: 2014-10-16
+heat_template_version: 2016-04-08
 
 description:                       >
   This is a nested Heat used by the Web Applications Workload Architecture. These templates demonstrate
@@ -10,16 +10,16 @@ description:                       >
   public_network_id
 
 parameters:
-    public_network_id:
-        type:                      string
-        label:                     Public Network
-        description:               >
-            REQUIRED PARAMETER
-            The public network name or id used to access the internet.
-            This will fail if this is not a true public network
-        constraints:
-            - custom_constraint:   neutron.network
-              description:         Must be a valid public network on your cloud
+    # public_network_id:
+    #     type:                      string
+    #     label:                     Public Network
+    #     description:               >
+    #         REQUIRED PARAMETER
+    #         The public network name or id used to access the internet.
+    #         This will fail if this is not a true public network
+    #     constraints:
+    #         - custom_constraint:   neutron.network
+    #           description:         Must be a valid public network on your cloud
 
     dns_nameserver:
         type:                      comma_delimited_list
@@ -55,22 +55,22 @@ resources:
             dns_nameservers:        { get_param: dns_nameserver }
             enable_dhcp:           true
 
-# create a router between the public/external network and the web network
-    public_router:
-        type:                      OS::Neutron::Router
-        properties:
-            name:                  PublicWebRouter
-            external_gateway_info:
-                network:           { get_param: public_network_id }
-
-# attach the web private network to the public router
-    public_router_interface:
-        type:                      OS::Neutron::RouterInterface
-        # Make sure the public router and web subnet have been created first
-        depends_on:                [public_router, web_private_network_subnet]
-        properties:
-            router:                 { get_resource: public_router }
-            subnet:                 { get_resource: web_private_network_subnet }
+# # create a router between the public/external network and the web network
+#     public_router:
+#         type:                      OS::Neutron::Router
+#         properties:
+#             name:                  PublicWebRouter
+#             external_gateway_info:
+#                 network:           { get_param: public_network_id }
+#
+# # attach the web private network to the public router
+#     public_router_interface:
+#         type:                      OS::Neutron::RouterInterface
+#         # Make sure the public router and web subnet have been created first
+#         depends_on:                [public_router, web_private_network_subnet]
+#         properties:
+#             router:                 { get_resource: public_router }
+#             subnet:                 { get_resource: web_private_network_subnet }
 
 #############################
 # create a private network/subnet for the Application servers
@@ -98,12 +98,12 @@ resources:
             dns_nameservers:       { get_param: dns_nameserver }
             enable_dhcp:           true
 
-# create a router linking App and Web network
-    App_router:
-        type:                      OS::Neutron::Router
-        properties:
-            name:                  "AppWebRouter"
-            external_gateway_info: {"network":  { get_param: public_network_id }, "enable_snat": True}
+# # create a router linking App and Web network
+#     App_router:
+#         type:                      OS::Neutron::Router
+#         properties:
+#             name:                  "AppWebRouter"
+#             external_gateway_info: {"network":  { get_param: public_network_id }, "enable_snat": True}
 
 # Create a port connecting the App_router to the App network
     web_router_app_port:
@@ -118,27 +118,27 @@ resources:
             fixed_ips:             [{"ip_address": 192.168.101.5}]
 
 # Create a port connecting the App_router to the Web network
-  web_router_web_port:
-    type:                          OS::Neutron::Port
-    depends_on:                    [web_private_network]
-    properties:
-      name:                        "Web_Net_Port"
-        network:                   { get_resource: web_private_network }
-        fixed_ips:                 [{"ip_address": 192.168.100.5}]
+    web_router_web_port:
+        type: OS::Neutron::Port
+        depends_on: [web_private_network]
+        properties:
+            name: "Web_Net_Port"
+            network: { get_resource: web_private_network }
+            fixed_ips: [{"ip_address": 192.168.100.5}]
 
-  App_router_interface1:
-    type:                          OS::Neutron::RouterInterface
-    depends_on:                    [App_router, web_router_app_port]
-    properties:
-        router:                    { get_resource: App_router }
-        port:                      { get_resource: web_router_app_port }
+    App_router_interface1:
+        type:                          OS::Neutron::RouterInterface
+        depends_on: [App_router, web_router_app_port]
+        properties:
+            router: { get_resource: App_router }
+            port:   { get_resource: web_router_app_port }
 
-  App_router_interface2:
-    type:                          OS::Neutron::RouterInterface
-    depends_on:                    [App_router, web_router_web_port]
-    properties:
-        router:                    { get_resource: App_router }
-        port:                      { get_resource: web_router_web_port }
+    App_router_interface2:
+        type:                          OS::Neutron::RouterInterface
+        depends_on:                    [App_router, web_router_web_port]
+        properties:
+            router:                    { get_resource: App_router }
+            port:                      { get_resource: web_router_web_port }
 
 ##############################
 # Create two Load Balancers one for the Web tier with a public IP and one for the App Tier
@@ -171,12 +171,12 @@ resources:
             protocol:              TCP
 
 # Floating_IP:
-    Web_Network_Floating_IP:
-        type:                      OS::Neutron::FloatingIP
-        depends_on:                [Web_Tier_LoadBalancer,public_router_interface]
-        properties:
-            floating_network: {get_param: public_network_id}
-            port_id: { get_attr:   [ Web_Tier_LoadBalancer, vip_port_id ] }
+    # Web_Network_Floating_IP:
+    #     type:                      OS::Neutron::FloatingIP
+    #     depends_on:                [Web_Tier_LoadBalancer,public_router_interface]
+    #     properties:
+    #         floating_network: {get_param: public_network_id}
+    #         port_id: { get_attr:   [ Web_Tier_LoadBalancer, vip_port_id ] }
 
 #****************************************
 # LBaaS V2 Load Balancer for App Tier
@@ -224,12 +224,12 @@ resources:
             dns_nameservers:       { get_param: dns_nameserver }
             enable_dhcp:           true
 
-# create a router linking Database and App network
-    DB_router:
-        type:                      OS::Neutron::Router
-        properties:
-            name:                  "AppDBRouter"
-            external_gateway_info: {"network":  { get_param: public_network_id }, "enable_snat": True}
+# # create a router linking Database and App network
+#     DB_router:
+#         type:                      OS::Neutron::Router
+#         properties:
+#             name:                  "AppDBRouter"
+#             external_gateway_info: {"network":  { get_param: public_network_id }, "enable_snat": True}
 
 # Create a port connecting the db_router to the db network
     db_router_db_port:
