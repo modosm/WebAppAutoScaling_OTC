@@ -135,6 +135,7 @@ resources:
 
     floating_ip_setup:
         type:                   lib/setup_public_LB.yml
+        properties:
 
 outputs:
     web_lbaas_ip:
