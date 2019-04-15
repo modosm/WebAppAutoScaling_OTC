@@ -1,4 +1,4 @@
-heat_template_version: 2014-10-16
+heat_template_version: 2016-04-08
 
 description: >
   This is the main Heat template for the 3-tier LAMP.
@@ -130,5 +130,50 @@ resources:
     network_setup:
         type:                   lib/setup_net_sg.yaml
         properties:
-            public_network_id:          { get_param: public_network_id }
-            dns_nameserver:             { get_param: dns_nameserver }
+            # public_network_id: { get_param: public_network_id }
+            dns_nameserver: { get_param: dns_nameserver }
+
+    floating_ip_setup:
+        type:                   lib/setup_public_LB.yml
+
+outputs:
+    web_lbaas_ip:
+        description:                                            >
+            This is the floating IP assigned to the WEB LoadBalancer.
+        value:
+            {get_attr: [network_setup, web_lbaas_IP]}
+
+    app_lbaas_ip:
+        description:                                            >
+            This is the floating IP assigned to the Application LoadBalancer.
+        value:
+            {get_attr: [network_setup, app_lbaas_IP]}
+
+    web_scale_up_url:
+        description:                                            >
+            This URL is the webhook to scale up the WEB autoscaling group.  You
+            can invoke the scale-up operation by doing an HTTP POST to this
+            URL; no body nor extra headers are needed.  You do need to be authenticated
+            Example:                                            source openrc; curl -X POST "<url>"
+        value:
+            {get_attr: [web_scaleup_policy,  alarm_url]}
+
+    web_scale_down_url:
+        description:                                            >
+            This URL is the webhook to scale down the WEB autoscaling group.
+        value:
+            {get_attr: [web_scaledown_policy,  alarm_url]}
+
+    app_scale_up_url:
+        description:                                            >
+            This URL is the webhook to scale up the application autoscaling group.  You
+            can invoke the scale-up operation by doing an HTTP POST to this
+            URL; no body nor extra headers are needed.
+        value:
+            {get_attr: [app_scaleup_policy,  alarm_url]}
+
+    app_scale_down_url:
+        description:                                            >
+            This URL is the webhook to scale down the application autoscaling group.
+        value:
+            {get_attr: [app_scaledown_policy,  alarm_url]}
