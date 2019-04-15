@@ -1,0 +1,45 @@
+heat_template_version: 2016-04-08
+
+description: Create an ELB instance.
+resources:
+    web_elb_loadbalancer:
+        type: OSE::ELB::LoadBalancer
+        properties:
+            name: loadbalancer
+            vpc_id: VPC ID
+            type: External
+            bandwidth: 300
+            admin_state_up: true
+    web_elb_listener:
+        type: OSE::ELB::Listener
+        properties:
+            name: web_elb_listener
+            loadbalancer_id: { get_resource: elb_loadbalancer }
+            protocol: HTTP
+            port: 80
+            backend_protocol: HTTP
+            backend_port: 80
+            lb_algorithm: leastconn
+            sticky_session_type: insert
+    web_elb_healthcheck:
+        type: OSE::ELB::HealthCheck
+        properties:
+            listener_id: { get_resource: web_elb_listener }
+            healthcheck_protocol: HTTP
+            healthcheck_timeout: 2
+            unhealthy_threshold: 3
+            healthcheck_interval: 5
+            healthy_threshold: 3
+            healthcheck_connect_port: 8080
+            healthcheck_uri: /
+    web_elb_member:
+        type: OSE::ELB::Member
+        properties:
+            listener_id: { get_resource: elb_listener }
+            members:
+                - server_id: { get_resource: nova_server1 }
+                  address: { get_attr: [nova_server1, first_address] }
+    server_port:
+        type: OS::Neutron::Port
+        properties:
+            network: Network Name or ID
