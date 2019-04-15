@@ -1,2 +1,4 @@
 # WebAppAutoScaling_OTC
-openstack stack create  -f WebAppAutoScaling.yaml -Pf keys.id WebAppAutoScaling
+`openstack stack create -t WebAppAutoScaling.yaml --parameter-file key=keys.id WebAppAutoScaling`
+
+`openstack stack update -t WebAppAutoScaling.yaml --parameter-file key=keys.id WebAppAutoScaling`
