@@ -1,4 +1,4 @@
-heat_template_version: 2015-04-30
+heat_template_version: 2014-10-16
 
 description:                       >
     This is a nested Heat used by the Web Applications Workload Architecture These templates demonstrate a sample
