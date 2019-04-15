@@ -1,4 +1,4 @@
-heat_template_version: 2016-04-08
+heat_template_version: 2015-04-30
 
 description: >
   This is the main Heat template for the 3-tier LAMP.
