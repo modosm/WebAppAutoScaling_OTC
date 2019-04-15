@@ -1,4 +1,4 @@
-heat_template_version:             2016-10-14
+heat_template_version: 2016-04-08
 
 description:                       >
   This is a nested Heat used by the Web Applications Workload Architecture. These templates demonstrate
@@ -27,10 +27,7 @@ parameters:
         description:               The IP address of a DNS nameserver
         default:                   8.8.8.8,8.8.4.4
 
-#####################################################
 resources:
-# Create 3 private Networks, one for each Tier
-# create a private network/subnet for the web servers
     web_private_network:
         type:                      OS::Neutron::Net
         properties:
@@ -38,13 +35,14 @@ resources:
 
     web_private_network_subnet:
         type:                      OS::Neutron::Subnet
-        # depends_on makes sure that a resource is created prior to a get_resource command
-        # otherwise you may have race conditions and a stack will work sometimes and not others
+        # depends_on makes sure that a resource is created prior to a get_resource
+        # command otherwise you may have race conditions and a stack will work sometimes
+        # and not others
         depends_on:                [web_private_network]
         properties:
             cidr:                  192.168.100.0/24
             # start IP allocation at .10 to allow room for the hard coded port IPs
-            allocation_pools:      { "start": 192.168.100.10, "end": 192.168.100.200 }]
+            allocation_pools:      [{ "start": 192.168.100.10, "end": 192.168.100.200 }]
             #Need to define default gateway in order for LBaaS namespace to pick it up
             #If you let neutron grant a default gateway IP, then the LBaaS namespace may
             #not pick it up and you will have routing issues
@@ -114,9 +112,10 @@ resources:
         properties:
             name:                  "App_Net_Port"
             network:               { get_resource: App_private_network }
-      # Assign the default gateway address
-      # The default gateway will get set as the default route in the LBaaS namespace
-      fixed_ips:                   [{"ip_address": 192.168.101.5}]
+            # Assign the default gateway address
+            # The default gateway will get set as the default route in the LBaaS
+            # namespace
+            fixed_ips:             [{"ip_address": 192.168.101.5}]
 
 # Create a port connecting the App_router to the Web network
   web_router_web_port:
